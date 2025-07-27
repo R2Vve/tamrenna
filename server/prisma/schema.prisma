@@ -1,0 +1,127 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  phone     String?
+  role      UserRole @default(MEMBER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  memberships Membership[]
+  classes     ClassBooking[]
+
+  @@map("users")
+}
+
+model Membership {
+  id        String           @id @default(cuid())
+  userId    String
+  type      MembershipType
+  status    MembershipStatus @default(ACTIVE)
+  startDate DateTime
+  endDate   DateTime
+  price     Float
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("memberships")
+}
+
+model Class {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  instructor  String
+  capacity    Int
+  duration    Int // in minutes
+  price       Float
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  schedules ClassSchedule[]
+  bookings  ClassBooking[]
+
+  @@map("classes")
+}
+
+model ClassSchedule {
+  id        String    @id @default(cuid())
+  classId   String
+  dayOfWeek Int // 0 = Sunday, 1 = Monday, etc.
+  startTime String // "HH:MM" format
+  endTime   String // "HH:MM" format
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@map("class_schedules")
+}
+
+model ClassBooking {
+  id        String            @id @default(cuid())
+  userId    String
+  classId   String
+  date      DateTime
+  status    ClassBookingStatus @default(CONFIRMED)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  // Relations
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, classId, date])
+  @@map("class_bookings")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  STAFF
+  TRAINER
+  MEMBER
+}
+
+enum MembershipType {
+  BASIC
+  PREMIUM
+  VIP
+  DAY_PASS
+}
+
+enum MembershipStatus {
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+  CANCELLED
+}
+
+enum ClassBookingStatus {
+  CONFIRMED
+  CANCELLED
+  WAITLIST
+  NO_SHOW
+}
